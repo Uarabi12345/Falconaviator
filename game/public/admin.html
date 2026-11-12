@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Falcon Aviator — Admin</title>
+<style>
+:root { --bg: #0b0f19; --panel: rgba(20, 25, 40, 0.85); --border: rgba(255, 255, 255, 0.08); --red: #ff3344; --green: #22dd77; --text: #ffffff; --muted: #8b92a5; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+.header { display: flex; justify-content: space-between; align-items: center; max-width: 900px; margin: 0 auto 20px; }
+.logo { font-size: 20px; font-weight: 900; color: var(--red); }
+.badge { background: var(--red); color: white; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 800; letter-spacing: 1px; }
+.logout-btn { background: rgba(255,255,255,.05); border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: none; }
+.logout-btn:hover { background: var(--red); border-color: var(--red); }
+.container { max-width: 900px; margin: 0 auto; display: grid; gap: 20px; }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
+h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 16px; }
+
+/* NEW STATS GRID */
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.stat-box { background: rgba(255,255,255,.03); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; }
+.stat-box .label { font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 700; }
+.stat-box .value { font-size: 24px; font-weight: 900; color: var(--green); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.stat-box .value.blue { color: #60a5fa; }
+.stat-box .value.white { color: white; }
+
+.preview-grid { display: flex; gap: 12px; flex-wrap: wrap; }
+.preview-box { flex: 1; min-width: 120px; background: rgba(34,221,119,.1); border: 1px solid rgba(34,221,119,.3); border-radius: 12px; padding: 16px; text-align: center; }
+.preview-box .pos { font-size: 10px; color: var(--muted); font-weight: 700; letter-spacing: 1px; }
+.preview-box .val { font-size: 28px; font-weight: 900; color: var(--green); font-variant-numeric: tabular-nums; margin-top: 4px; }
+input, button { font-family: inherit; }
+input { background: rgba(0,0,0,.3); border: 1px solid var(--border); color: white; padding: 12px; border-radius: 8px; outline: none; width: 100%; margin-bottom: 10px; }
+.btn { border: none; border-radius: 8px; padding: 12px 20px; font-weight: 800; cursor: pointer; text-transform: uppercase; font-size: 13px; }
+.btn.red { background: var(--red); color: white; }
+.btn.danger { background: #991b1b; color: white; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--border); font-size: 14px; }
+th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+code { background: rgba(255,255,255,.1); padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+.note { font-size: 12px; color: var(--green); margin-bottom: 12px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">FALCON AVIATOR — ADMIN</div>
+  <div style="display:flex; align-items:center; gap: 15px;">
+    <div class="badge">LIVE</div>
+    <a href="/admin-login.html" onclick="localStorage.removeItem('adminPassword'); localStorage.removeItem('adminRole');" class="logout-btn">LOGOUT</a>
+  </div>
+</div>
+
+<div class="container">
+  <!-- NEW STATS DASHBOARD -->
+  <div class="card">
+    <h2>Platform Stats</h2>
+    <div class="stats-grid">
+      <div class="stat-box"><div class="label">Total Deposits</div><div class="value" id="statDeposits">0</div></div>
+      <div class="stat-box"><div class="label">Total Withdrawals</div><div class="value blue" id="statWithdrawals">0</div></div>
+      <div class="stat-box"><div class="label">Total Wagered</div><div class="value white" id="statWagered">0</div></div>
+      <div class="stat-box"><div class="label">Active Players</div><div class="value" id="statPlayers">0</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Upcoming Round Outcomes (Preview)</h2>
+    <p class="note">🔒 PREVIEW (TEST ONLY) — These are the next 5 multipliers before they play.</p>
+    <div class="preview-grid" id="preview"></div>
+  </div>
+
+  <div class="card" id="adminMgmt">
+    <h2>Administrator Management</h2>
+    <div style="display:flex; gap:10px; margin-bottom: 15px;">
+      <input id="newAdminName" placeholder="New admin name (e.g. Brian)">
+      <button class="btn red" onclick="addAdmin()" style="width:150px;">Add Admin</button>
+    </div>
+    <table>
+      <thead><tr><th>Name</th><th>Login Token</th><th>Action</th></tr></thead>
+      <tbody id="adminList"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const password = localStorage.getItem('adminPassword');
+const role = localStorage.getItem('adminRole');
+
+if (!password) window.location.href = '/admin-login.html';
+if (role !== 'super') document.getElementById('adminMgmt').style.display = 'none';
+
+async function refreshStats() {
+  try {
+    const r = await fetch(`/api/admin/stats?password=${encodeURIComponent(password)}`);
+    const j = await r.json();
+    if (!r.ok) return;
+    document.getElementById('statDeposits').textContent = `${j.totalDeposits} Cr`;
+    document.getElementById('statWithdrawals').textContent = `${j.totalWithdrawals} Cr`;
+    document.getElementById('statWagered').textContent = `${j.totalBets} Cr`;
+    document.getElementById('statPlayers').textContent = j.activePlayers;
+  } catch(e) {}
+}
+
+async function refreshPreview() {
+  try {
+    const r = await fetch(`/api/admin/preview?password=${encodeURIComponent(password)}`);
+    const j = await r.json();
+    if (!r.ok) return;
+    document.getElementById('preview').innerHTML = j.upcoming.map(u => `
+      <div class="preview-box">
+        <div class="pos">ROUND #${u.position}</div>
+        <div class="val">${u.crash.toFixed(2)}x</div>
+      </div>
+    `).join('');
+  } catch(e) {}
+}
+
+setInterval(() => { refreshStats(); refreshPreview(); }, 2000);
+refreshStats(); refreshPreview();
+
+async function refreshAdmins() {
+  if (role !== 'super') return;
+  const r = await fetch(`/api/admin/list?password=${encodeURIComponent(password)}`);
+  const j = await r.json();
+  if (!r.ok) return;
+  document.getElementById('adminList').innerHTML = j.admins.map(a => `
+    <tr><td>${a.name}</td><td><code>${a.token}</code></td><td><button class="btn danger" onclick="removeAdmin('${a.token}')">Remove</button></td></tr>
+  `).join('') || '<tr><td colspan="3" style="color:#666">No added admins.</td></tr>';
+}
+
+async function addAdmin() {
+  const name = document.getElementById('newAdminName').value.trim();
+  if (!name) return;
+  const r = await fetch('/api/admin/add', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ password, name })
+  });
+  const j = await r.json();
+  if (r.ok) { alert(`Admin added. Token: ${j.token}`); document.getElementById('newAdminName').value = ''; refreshAdmins(); }
+  else alert(j.error);
+}
+
+async function removeAdmin(token) {
+  if (!confirm('Remove this admin?')) return;
+  await fetch('/api/admin/remove', { method: 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password, token }) });
+  refreshAdmins();
+}
+</script>
+</body>
+</html>

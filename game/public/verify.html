@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Falcon Aviator — Provably Fair Verifier</title>
+<style>
+:root { --bg: #09090b; --panel: #18181b; --border: #27272a; --red: #ef4444; --green: #22c55e; --text: #fafafa; --muted: #a1a1aa; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: monospace; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.card { width: 100%; max-width: 600px; background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,.5); }
+h1 { font-size: 24px; font-weight: 900; margin-bottom: 8px; color: var(--green); }
+p { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+.field { margin-bottom: 16px; }
+label { display: block; font-size: 11px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; font-weight: 700; }
+input { width: 100%; background: #000; border: 1px solid var(--border); color: var(--green); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 14px; outline: none; }
+input:focus { border-color: var(--green); }
+button { width: 100%; background: var(--green); color: #000; font-weight: 900; padding: 14px; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; text-transform: uppercase; margin-top: 10px; }
+button:hover { opacity: 0.9; }
+.result { margin-top: 20px; padding: 16px; background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.3); border-radius: 8px; text-align: center; display: none; }
+.result .val { font-size: 32px; font-weight: 900; color: var(--green); }
+.result .err { color: var(--red); font-size: 14px; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>Provably Fair Verifier</h1>
+  <p>Enter the Server Seed and Client Seed from any past round to verify the crash point was generated fairly without manipulation.</p>
+  
+  <div class="field">
+    <label>Server Seed (Revealed after crash)</label>
+    <input id="serverSeed" type="text" placeholder="e.g. a1b2c3d4e5f6...">
+  </div>
+  
+  <div class="field">
+    <label>Client Seed (Public)</label>
+    <input id="clientSeed" type="text" placeholder="e.g. f6e5d4c3b2a1...">
+  </div>
+  
+  <button onclick="verify()">Verify Crash Point</button>
+  
+  <div class="result" id="result">
+    <div style="font-size:12px; color:var(--muted); margin-bottom:4px;">Calculated Crash Point</div>
+    <div class="val" id="crashVal">0.00x</div>
+  </div>
+</div>
+
+<script>
+// HMAC-SHA256 logic mirrored from engine.js
+async function calculateCrash(serverSeed, clientSeed) {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw", encoder.encode(serverSeed), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(clientSeed));
+  const hashArray = Array.from(new Uint8Array(signature));
+  const hmac = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  const n = parseInt(hmac.slice(0, 13), 16);
+  const E = 2 ** 52;
+  let crash;
+  if (n % 33 === 0) crash = 1.0;
+  else crash = Math.floor((100 * E - n) / (E - n)) / 100;
+  
+  return Math.min(Math.max(crash, 1.0), 10000); // default max
+}
+
+async function verify() {
+  const serverSeed = document.getElementById('serverSeed').value.trim();
+  const clientSeed = document.getElementById('clientSeed').value.trim();
+  const res = document.getElementById('result');
+  
+  if (!serverSeed || !clientSeed) return alert('Please enter both seeds');
+  
+  const crash = await calculateCrash(serverSeed, clientSeed);
+  
+  res.style.display = 'block';
+  document.getElementById('crashVal').textContent = crash.toFixed(2) + 'x';
+}
+</script>
+</body>
+</html>

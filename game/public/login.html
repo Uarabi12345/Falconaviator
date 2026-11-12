@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Falcon Aviator — Login</title>
+<style>
+:root { --bg: #0b0f19; --panel: rgba(20, 25, 40, 0.85); --border: rgba(255, 255, 255, 0.08); --red: #ff3344; --green: #22dd77; --text: #ffffff; --muted: #8b92a5; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: radial-gradient(circle at top left, #1a2235 0%, var(--bg) 60%); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.card { width: 100%; max-width: 400px; background: var(--panel); border: 1px solid var(--border); border-radius: 20px; padding: 30px; backdrop-filter: blur(10px); box-shadow: 0 20px 50px rgba(0,0,0,.5); }
+.logo { display: flex; align-items: center; gap: 8px; font-size: 24px; font-weight: 900; margin-bottom: 20px; justify-content: center; }
+.logo .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--red); box-shadow: 0 0 14px var(--red); }
+.tabs { display: flex; margin-bottom: 20px; background: rgba(0,0,0,.3); border-radius: 10px; padding: 4px; }
+.tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; font-size: 14px; font-weight: 700; border-radius: 8px; color: var(--muted); transition: all .2s; }
+.tab.active { background: var(--panel); color: var(--text); box-shadow: 0 2px 10px rgba(0,0,0,.2); }
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 700; }
+input { background: rgba(0,0,0,.3); border: 1px solid var(--border); color: var(--text); padding: 14px; border-radius: 10px; font-size: 16px; outline: none; transition: border-color .2s; }
+input:focus { border-color: var(--red); }
+.btn { width: 100%; border: none; border-radius: 10px; padding: 15px; font-size: 14px; font-weight: 800; cursor: pointer; text-transform: uppercase; transition: all .2s; }
+.btn.red { background: linear-gradient(135deg, #ff3344, #cc1122); color: white; }
+.btn:hover { transform: translateY(-2px); }
+.error { color: var(--red); font-size: 13px; text-align: center; margin-top: 10px; display: none; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo"><span class="dot"></span>FALCON AVIATOR</div>
+  
+  <div class="tabs">
+    <div class="tab active" id="tabLogin" onclick="switchTab('login')">Login</div>
+    <div class="tab" id="tabRegister" onclick="switchTab('register')">Register</div>
+  </div>
+
+  <div class="field">
+    <label>Phone Number</label>
+    <input id="phone" type="text" placeholder="e.g. 0712345678">
+  </div>
+
+  <div class="field">
+    <label>Password</label>
+    <input id="password" type="password" placeholder="Enter password">
+  </div>
+
+  <button class="btn red" id="submitBtn" onclick="handleSubmit()">Login & Play</button>
+
+  <div class="error" id="err"></div>
+</div>
+
+<script>
+let currentMode = 'login';
+
+function switchTab(mode) {
+  currentMode = mode;
+  document.getElementById('tabLogin').classList.toggle('active', mode === 'login');
+  document.getElementById('tabRegister').classList.toggle('active', mode === 'register');
+  document.getElementById('submitBtn').textContent = mode === 'login' ? 'Login & Play' : 'Create Account & Play';
+  document.getElementById('err').style.display = 'none';
+}
+
+function showErr(msg) {
+  const e = document.getElementById('err');
+  e.textContent = msg;
+  e.style.display = 'block';
+}
+
+function handleSubmit() {
+  const phone = document.getElementById('phone').value.trim();
+  const password = document.getElementById('password').value.trim();
+
+  if (phone.length < 9) return showErr('Enter a valid phone number');
+  if (password.length < 4) return showErr('Password must be at least 4 characters');
+
+  let users = JSON.parse(localStorage.getItem('wh_users') || '{}');
+
+  if (currentMode === 'register') {
+    if (users[phone]) return showErr('Phone number already registered');
+    users[phone] = password;
+    localStorage.setItem('wh_users', JSON.stringify(users));
+    login(phone);
+  } else {
+    if (!users[phone] || users[phone] !== password) return showErr('Invalid phone or password');
+    login(phone);
+  }
+}
+
+function login(phone) {
+  localStorage.setItem('playerPhone', phone);
+  localStorage.setItem('playerId', 'p_' + phone);
+  window.location.href = '/index.html';
+}
+</script>
+</body>
+</html>
